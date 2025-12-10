@@ -34,10 +34,12 @@ architecture banco_reg of regfile is
     end component;
 
     -- registradores X0 ate X30 (exclui-se X31, pois ele nao pode ser sobrescrito)
-    signal regs_q : array (0 to 30) of bit_vector(63 downto 0); --array com as saidas de cada registrador
+    --signal regs_q : array (0 to 30) of bit_vector(63 downto 0); --array com as saidas de cada registrador
+	    type regs_array is array (0 to 30) of bit_vector(63 downto 0);
+		signal regs_q : regs_array; --array com as saidas de cada registrador
 
     -- registrador X31 (XZR)
-    constant reg31 : bit_vector(63 downto 0) := (others => '0'); 
+    constant reg_31 : bit_vector(63 downto 0) := (others => '0'); 
 	 -- na minha cabeca isso funciona como registrador ligado ao terra
 
     --##--
@@ -45,7 +47,7 @@ architecture banco_reg of regfile is
     -- mux 32x1 (para q1 e q2)
     function mux32x64 (
         sel : bit_vector(4 downto 0);
-        reg_array : array (0 to 30) of bit_vector(63 downto 0)
+        reg_array : regs_array
     ) return bit_vector is
         variable n : integer := to_integer(unsigned(sel));
     begin
@@ -70,8 +72,8 @@ begin
         end if;
     end process;
 
-    --##--
-	 
+    --##--			
+			
     -- registradores X0 ate X30
     gen_regs : for i in 0 to 30 generate
         reg_i : reg
@@ -79,7 +81,7 @@ begin
             port map(
                 clock  => clock,
                 reset  => reset,
-                enable => regWrite AND dec_wr(i),
+                enable => regWrite and dec_wr(i),
                 d      => d,
                 q      => regs_q(i) 
             );
@@ -88,7 +90,7 @@ begin
 	-- mas para ter certeza teria que testar com o testbench
 	 
 	 --##--
-	 
+
     -- leitura das saidas dos registradores
     q1 <= mux32x64(rr1, regs_q);
     q2 <= mux32x64(rr2, regs_q);
