@@ -1,60 +1,74 @@
 -------------------------------------------------------------------
--- Arquivo: tb_ram_generica.vhd
--- Descricao: Testbench para a memoria RAM sincrona de tamanho parametrizável, alocando o tamanho 16x4
---
--- Comportamento do Testbench:
--- 1. Escreve os dados de 15 a 0 nos enderecos de 0 a 15.
--- 2. Le cada um dos enderecos de 0 a 15.
--- 3. Verifica se o dado lido e o mesmo que foi escrito.
--- 4. Indica o sucesso ou a falha para cada caso de teste.
---
--- código ADAPTADO de tb_ram_16x4.vhd 
+-- código ADAPTADO de ram_tb.vhd (fornecido)
 -------------------------------------------------------------------
--------------------------------------------------------------------
--- Revisoes:
--- Data       Versao Autor               Descricao
--- 07/10/2025 1.0    Pedro H. F. Mendes  Versão inicial para PCS3225
--------------------------------------------------------------------
+
 library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
 
-entity tb_ram_generica is
-end entity tb_ram_generica;
+entity tb_ram is
+end entity tb_ram;
 
-architecture test_cases of tb_ram_generica is
+architecture test_cases of tb_ram is
 
     -- Componente a ser testado (DUT - Device Under Test)
-    component ram_generica is
+    component memoriaDados is
         generic (
-            tamanhoEndereco : natural := 4;
-            tamanhoPalavra  : natural := 4
+            addressSize : natural := 8;
+            dataSize    : natural := 8;
+            datFileName : string  := "memDados_conteudo_inicial.dat"
         );
         port (
-            clk          : in  std_logic;
-            endereco     : in  std_logic_vector(tamanhoEndereco-1 downto 0);
-            dado_entrada : in  std_logic_vector(tamanhoPalavra-1 downto 0);
-            n_we         : in  std_logic;
-            n_cs         : in  std_logic;
-            dado_saida   : out std_logic_vector(tamanhoPalavra-1 downto 0)
+            clock 	: in  bit;
+            wr 		: in  bit;
+            addr 	: in  bit_vector (addressSize - 1 downto 0);
+            data_i 	: in  bit_vector (dataSize - 1 downto 0);
+            data_o 	: out bit_vector (dataSize - 1 downto 0)
         );
-    end component ram_generica;
+    end component memoriaDados;
 
     -- Sinais de entrada para o DUT
-    signal s_clk          : std_logic := '0';
-    signal s_endereco     : std_logic_vector(3 downto 0) := (others => '0');
-    signal s_dado_entrada : std_logic_vector(3 downto 0) := (others => '0');
-    signal s_n_we         : std_logic := '1';
-    signal s_n_cs         : std_logic := '1';
+    signal s_clk          : bit := '0';
+    signal s_addr     : bit_vector(6 downto 0) := (others => '0');
+    signal s_data_i : bit_vector(7 downto 0) := (others => '0');
+    signal s_wr         : bit := '0';
 
     -- Sinal de saida do DUT
-    signal s_dado_saida : std_logic_vector(3 downto 0);
+    signal s_data_o : bit_vector(7 downto 0);
 
     -- Constante para o periodo do clock
     constant CLK_PERIOD : time := 10 us;
     
     -- Sinal de controle de fim de simulação
-    signal keep_simulating : std_logic := '0';    
+    signal keep_simulating : bit := '0';    
+
+    function int_to_bitvector(value : integer; N : natural) return bit_vector is
+        variable result : bit_vector(N-1 downto 0) := (others => '0');
+        variable temp   : integer := value;
+    begin
+        for i in 0 to N-1 loop
+            if (temp mod 2) = 1 then
+                result(i) := '1';
+            else
+                result(i) := '0';
+            end if;
+            temp := temp / 2;
+        end loop;
+        return result;
+    end function;
+
+    -- funcao de conversão bit_vector para integer
+    function bitvector_to_int(bv : bit_vector) return integer is
+        variable result : integer := 0;
+        variable idx    : integer := 0;
+        begin
+            for i in bv'reverse_range loop
+                if bv(i) = '1' then
+                    result := result + (2**idx);
+                end if;
+                idx := idx + 1;
+            end loop;
+        return result;
+    end function;
+
 
 begin
 
@@ -62,80 +76,90 @@ begin
     s_clk <= not(s_clk) and keep_simulating after CLK_PERIOD/2;
 
     -- Instanciacao do DUT
-    dut_ram : ram_generica
+    UUT: memoriaDados
         generic map (
-            tamanhoEndereco => 4,
-            tamanhoPalavra  => 4
+            addressSize => 7,
+            dataSize  => 8,
+            datFileName => "memDados_conteudo_inicial.dat"
         )
         port map (
-            clk          => s_clk,
-            endereco     => s_endereco,
-            dado_entrada => s_dado_entrada,
-            n_we         => s_n_we,
-            n_cs         => s_n_cs,
-            dado_saida   => s_dado_saida
+            clock => s_clk,
+            wr => s_wr,
+            addr => s_addr,
+            data_i => s_data_i,
+            data_o => s_data_o
         );
 
     -- Geração de estímulos e verificação
     gera_estimulos : process
-        variable expected_data : std_logic_vector(3 downto 0);
-        variable actual_data   : std_logic_vector(3 downto 0);
+        variable expected_data : bit_vector(7 downto 0);
+        variable actual_data   : bit_vector(7 downto 0);
     begin
         -- === Inicio do Teste ===
         keep_simulating <= '1';
         wait for CLK_PERIOD;
-        report "Inicio do Testbench para a RAM Generica 16x4." severity note;
+        report "Inicio do Testbench para a RAM." severity note;
 
         -- ==========================================================
-        -- FASE 1: Escrita dos dados na memoria
+        -- FASE 1: leitura assíncrona dos dados iniciais
+        -- ==========================================================
+        report "Fase de leitura incial." severity note;
+
+        --teste 1: entrada zerada
+        s_addr <= (others => '0');
+        wait for CLK_PERIOD;
+
+        assert s_data_o = "10000000" report "Teste de leitura da posição 0 falhou" severity error;
+
+        --teste 2: entrada máxima
+        s_addr <= (others => '1');
+        wait for CLK_PERIOD;
+
+        assert s_data_o = "00000000" report "Teste de leitura da posição 127 falhou" severity error;
+
+        --teste 3: entrada intermediária
+        s_addr <= "0001111";
+        wait for CLK_PERIOD;
+
+        assert s_data_o = "00001001" report "Teste de leitura da posição 15 falhou" severity error;
+       
+
+        -- ==========================================================
+        -- FASE 2: Escrita dos dados na memoria
         -- ==========================================================
         report "Fase de Escrita: Escrevendo valores de 15 a 0 nos enderecos de 0 a 15." severity note;
-        s_n_cs <= '0'; -- Ativa o chip
-        s_n_we <= '0'; -- Ativa a escrita 
-        wait until rising_edge(s_clk);
+        s_wr <= '1'; -- Ativa a escrita 
+        wait until s_clk'event and s_clk = '1';
 
         for i in 0 to 15 loop
-            s_endereco     <= std_logic_vector(to_unsigned(i, 4));
-            s_dado_entrada <= std_logic_vector(to_unsigned(15 - i, 4));
-            wait until rising_edge(s_clk);
+            s_addr     <= int_to_bitvector(i, 7);
+            s_data_i <= int_to_bitvector(15 - i, 8);
+            wait until s_clk'event and s_clk = '1';
         end loop;
 
         -- ==========================================================
-        -- FASE 2: Leitura e Verificacao dos dados
+        -- FASE 3: Leitura e Verificacao dos dados
         -- ==========================================================
         report "Fase de Leitura e Verificacao." severity note;
-        s_n_cs <= '0'; -- Ativa o chip
-        s_n_we <= '1'; -- Ativa modo de leitura
-        wait until rising_edge(s_clk);
+        s_wr <= '0'; -- Ativa modo de leitura
+        wait until s_clk'event and s_clk = '1';
 
         for i in 0 to 15 loop
             -- Seleciona Endereço
-            s_endereco <= std_logic_vector(to_unsigned(i, 4));
+            s_addr <= int_to_bitvector(i, 7);
 
             -- Espera até que o dado seja lido e propagado para a saida
             wait for CLK_PERIOD*3;
 
-            expected_data := std_logic_vector(to_unsigned(15 - i, 4));
-            actual_data := s_dado_saida;
+            expected_data := int_to_bitvector(15 - i, 8);
+            actual_data := s_data_o;
 
             assert actual_data = expected_data
                 report "Caso de Teste " & integer'image(i) & 
-                       " NOK: esperado " & integer'image(to_integer(unsigned(expected_data))) & 
-                       " mas foi lido " & integer'image(to_integer(unsigned(actual_data)))
+                       " NOK: esperado " & integer'image(bitvector_to_int(expected_data)) & 
+                       " mas foi lido " & integer'image(bitvector_to_int(actual_data))
                 severity error; 
         end loop;
-        
-        -- ==========================================================
-        -- FASE 3: Verifica se a saida e' 'Z' com /CS = 1.
-        -- ==========================================================
-        s_n_cs <= '1';
-        wait for CLK_PERIOD*3;
-        
-        -- Verificação de alta impedância sem usar 'image'
-        if s_dado_saida /= "ZZZZ" then
-            report "Caso de Teste de Alta Impedância NOK: esperado 'ZZZZ'"
-                severity error;
-        end if;
         
         -- === Fim do Teste ===
         keep_simulating <= '0';
