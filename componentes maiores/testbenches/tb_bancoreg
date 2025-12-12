@@ -51,10 +51,12 @@ begin
         
         type pattern_array is array (natural range <>) of pattern_type;
 
-        constant patterns : pattern_array := --rw    rr1      rr2       wr    d    q1  q2
-                                            (('0', "00000", "00000", "00000", (others => '0'), (others => '0'),(others => '0')),
-                                             ('0', "10000", "11111", "10000", (others => '1'), (others => '0'), (others => '0')),
-                                             ('1', "00100", "11110", "11110", (63 => '1', others => '0'), (others => '0'), (63 => '1', others => '0'))) ;
+        constant patterns : pattern_array := --rw    rr1      rr2       wr            d              q1                q2
+                                            (('0', "00000", "00000", "00000", (others => '0'), (others => '0'),(others => '0')), -- apos reset
+                                             ('0', "10000", "11111", "10000", (others => '1'), (others => '0'), (others => '0')), -- ver se escreve com rw desligado, leitura X16 e X31 (XZR)
+                                             ('1', "00100", "11110", "11110", (63 => '1', others => '0'), (others => '0'), (63 => '1', others => '0')), --X30 <= "10000....0", leitura X30 e X4
+                                             ('1', "11110", "00000", "00000", (others => '1'), (63 => '1', others => '0'),(others => '1')), -- X0 <= "1111...1", leitura X0 e X30
+                                             ('1', "00000", "11111", "11111", (others => '1'), (others => '1'),(others => '0'))) ;  -- tentativa de escrever "1111...1" em X31, leitura X0 e X31
     begin
 
         assert false report "Inicio Teste" severity note;
@@ -85,4 +87,3 @@ begin
 end process;
 
 end tb;
-
