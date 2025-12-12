@@ -36,6 +36,8 @@ architecture structural of ula is
 	
 	signal zeros : bit_vector(63 downto 0) := (others => '0');
 
+	signal tempF : bit_vector(63 downto 0);
+
 begin
 	-- carry inicial
 	carry(0) <= S(2);
@@ -50,7 +52,7 @@ begin
 				ainvert   => S(3),
 				binvert   => S(2),
 				operation => S(1 downto 0),
-				result    => F(i),
+				result    => tempF(i),
 				cout      => carry(i+1),
 				overflow  => ov_bits(i)
 			);
@@ -65,6 +67,8 @@ begin
 
 	Ov <= carry(63) xor carry(64);
 
-	Z <= '1' when F = zeros else '0';
+	Z <= '1' when tempF = zeros else '0';
+
+	F <= tempF;
 
 end architecture structural;
