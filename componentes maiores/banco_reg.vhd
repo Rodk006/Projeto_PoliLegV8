@@ -35,8 +35,8 @@ architecture banco_reg of regfile is
 
     -- registradores X0 ate X30 (exclui-se X31, pois ele nao pode ser sobrescrito)
     --signal regs_q : array (0 to 30) of bit_vector(63 downto 0); --array com as saidas de cada registrador
-	    type regs_array is array (0 to 30) of bit_vector(63 downto 0);
-		signal regs_q : regs_array; --array com as saidas de cada registrador
+    type regs_array is array (0 to 30) of bit_vector(63 downto 0);
+    signal regs_q : regs_array; --array com as saidas de cada registrador
 
     -- registrador X31 (XZR)
     constant reg_31 : bit_vector(63 downto 0) := (others => '0'); 
@@ -60,6 +60,8 @@ architecture banco_reg of regfile is
 	 -- dado q as saidas desse mux sao apenas regitradores a entrada sempre pertencerá ao vetor regs_q
 	 -- que possui os registradores.
 
+    signal reg_enable : bit_vector(30 downto 0);
+
 begin
     -- decodificador 5x32
     process(wr)
@@ -76,16 +78,19 @@ begin
 			
     -- registradores X0 ate X30
     gen_regs : for i in 0 to 30 generate
+    begin
+        reg_enable(i) <= regWrite and dec_wr(i);
         reg_i : reg
             generic map(dataSize => 64)
             port map(
                 clock  => clock,
                 reset  => reset,
-                enable => regWrite and dec_wr(i),
+                enable => reg_enable(i),
                 d      => d,
                 q      => regs_q(i) 
             );
     end generate;
+    
 	-- creio q por serem componentes registradores a permissao de escrita deles ja esta dito no arquivo reg.vhd
 	-- mas para ter certeza teria que testar com o testbench
 	 
