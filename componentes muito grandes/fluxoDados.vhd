@@ -132,7 +132,7 @@ architecture arch of fluxoDados is
 
     signal  outPC, outPC2, outPC3, outPC4, F2, F3, F4, F5, F6, F7, F8 : bit_vector(6 downto 0);
     signal instruction : bit_vector(31 downto 0); 
-    signal outMuxWD, readData1, readData2, readDataDM, A, B, F, outSL, immSE, pc4, pcBranch, outMuxPC, outMuxRegs : bit_vector(63 downto 0);
+    signal outMuxWD, readData1, readData2, readDataDM, A, B, F, outSL, immSE, pc4, pcBranch, outMuxPC, outMuxRegs, pcExtended, inst20to16extended, inst4to0extended: bit_vector(63 downto 0);
     signal zero, ov, cout, carry4, carryBR, branchControl : bit;
 
     begin 
@@ -185,9 +185,13 @@ architecture arch of fluxoDados is
                          port map (instruction, extendMSB, extendLSB, immSE);
 
         ULA64 : ula port map (readData1, B, alu_control, F, zero, ov, cout);
+        
+        inst20to16extended <= ((63 downto 5 => '0') & instruction(20 downto 16));
+
+        inst4to0extended <= ((63 downto 5 => '0') & instruction(4 downto 0));
 
         MUX_REGS : mux_n generic map (dataSize => 64)
-                         port map (((63 downto 5 => '0') & instruction(20 downto 16)), ((63 downto 5 => '0') & instruction(4 downto 0)), reg2Loc, outMuxRegs);
+                         port map (inst20to16extended, inst4to0extended, reg2Loc, outMuxRegs);
 
         MUX_ULA : mux_n generic map (dataSize => 64)
                         port map (readData2, immSE, aluSrc, B);
@@ -238,11 +242,13 @@ architecture arch of fluxoDados is
                                         datFileName => "memDadosInicialPolilegv8.dat")
                           port map (clock, memWrite, F8, readData2(7 downto 0), readDataDM(7 downto 0));
 
+        pcExtended <= ((63 downto 7 => '0') & outPC);
+        
         ADD_4 : adder_n generic map (dataSize => 64)
-                        port map (((63 downto 7 => '0') & outPC), (2 => '1', others => '0'), pc4, carry4);
+                        port map (pcExtended, (2 => '1', others => '0'), pc4, carry4);
 
         ADD_BR : adder_n generic map (dataSize => 64)
-                         port map (((63 downto 7 => '0') & outPC), outSL, pcBranch, carryBR);
+                         port map (pcExtended, outSL, pcBranch, carryBR);
 
         SL : two_left_shifts generic map (dataSize => 64)
                              port map (immSE, outSL);
