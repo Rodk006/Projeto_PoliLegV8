@@ -98,7 +98,7 @@ begin
             memToReg <= patterns(i).In_memToReg;
             alu_control <= patterns(i).In_aluc_control;
 
-            --wait for 2*CLK_PERIOD;
+            wait until rising_edge(clk);
 
             assert opcode = patterns(i).Out_opcode report "ERRO OPCODE TESTE " & integer'image(i);
 
