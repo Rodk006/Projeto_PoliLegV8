@@ -1,3 +1,12 @@
+--Grupo: T2G02
+
+--14606485	Rodrigo Kenzo Haruna	(Turma 1)
+--15487356	Rodrigo Oshima Asatsuma	(Turma 1)
+--15487759	Sami Barbosa Adissi	(Turma 1)
+--15453977	Gabriel Tagawa Francisco	(Turma 2)
+--15637613	Gustavo Pinha Letizio	(Turma 2)
+--15497416	Pedro de Oliveira Sousa	(Turma 2)
+
 library ieee;
 
 entity unidadeControle is
